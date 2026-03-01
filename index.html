@@ -227,6 +227,44 @@ body{
   background:transparent !important;
 }
 
+/* ===== ARROW INDICATOR ===== */
+.arrow-indicator{
+  position:absolute;
+  z-index:10;
+  pointer-events:none;
+  animation:arrowBounce 1s ease-in-out infinite;
+}
+.arrow-indicator svg{
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+}
+@keyframes arrowBounce{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-8px)}
+}
+
+/* Target highlight ring */
+.symbol.arrow-target{
+  outline:2px solid #ff4444;
+  outline-offset:4px;
+  border-radius:4px;
+}
+
+/* ===== ARROW MODE CONFIRM BUTTON ===== */
+#arrow-confirm-btn{
+  display:none;
+  position:fixed;
+  bottom:110px;right:16px;
+  z-index:100;
+  width:56px;height:56px;
+  border:none;border-radius:50%;
+  background:#ff4444;color:#fff;
+  font-size:24px;font-weight:700;
+  cursor:pointer;
+  box-shadow:0 4px 16px rgba(255,68,68,0.4);
+  transition:transform 0.15s;
+}
+#arrow-confirm-btn:active{transform:scale(0.9)}
+
 /* ===== BOTTOM CONTROLS ===== */
 #bottom-bar{
   position:fixed;bottom:0;left:0;right:0;z-index:100;
@@ -446,6 +484,10 @@ body.gabor-mode #menu-overlay{background:rgba(0,0,0,0.3)}
       <p>灰色背景に微妙に濃淡の異なる灰色の文字を表示するモードです。<strong>コントラスト感度（Contrast Sensitivity）</strong>のトレーニングに特化しています。</p>
       <p>一次視覚野（V1）のニューロンは特定のコントラスト閾値で反応します。低コントラスト刺激を繰り返し認識する訓練により、ニューロンの<strong>コントラスト利得制御（Contrast Gain Control）</strong>が改善され、わずかな明暗差でも対象を識別できるようになります。カリフォルニア大学の研究により、この種のトレーニングが老眼や近視の改善に有効であることが示されています。</p>
 
+      <h3>➡️ 矢印モード</h3>
+      <p>矢印で指し示されたターゲットに注目し、それをタップするか✓ボタンで消していくモードです。<strong>選択的注意（Selective Attention）</strong>のトレーニングに特化しています。</p>
+      <p><strong>前頭前野（PFC）</strong>と<strong>頭頂間溝（IPS）</strong>が制御する「注意のスポットライト」を特定のターゲットに向ける訓練です。周囲の妨害刺激を無視し、指定された対象のみに注意を集中することで、<strong>背側注意ネットワーク（Dorsal Attention Network）</strong>が強化されます。</p>
+
       <h3>📋 使い方</h3>
       <p>1. 画面上の文字やランドルト環をタップして消していきます</p>
       <p>2. メニューから移動モード・サイズ変化モードのON/OFFを切り替えます</p>
@@ -482,6 +524,10 @@ body.gabor-mode #menu-overlay{background:rgba(0,0,0,0.3)}
           <label>🔄 サイズ変化モード</label>
           <div class="toggle" id="togglePulse" onclick="toggleSetting('pulse')"></div>
         </div>
+        <div class="menu-row">
+          <label>➡️ 矢印モード</label>
+          <div class="toggle" id="toggleArrow" onclick="toggleArrowMode()"></div>
+        </div>
       </div>
 
       <div class="menu-section">
@@ -514,6 +560,9 @@ body.gabor-mode #menu-overlay{background:rgba(0,0,0,0.3)}
     <div class="size-label" id="sizeLabel">100%</div>
     <button onclick="adjustGlobalSize(1)" aria-label="Larger">＋</button>
   </div>
+
+  <!-- ARROW MODE CONFIRM BUTTON -->
+  <button id="arrow-confirm-btn" onclick="confirmArrowTarget()">✓</button>
 
   <!-- BOTTOM BAR -->
   <div id="bottom-bar">
@@ -574,6 +623,9 @@ let animFrameId = null;
 let tapCount = 0;
 let headerH = 56;
 let bottomH = 50;
+let arrowMode = false;
+let currentTarget = null;
+let arrowEl = null;
 
 // ===== SPLASH =====
 window.addEventListener('load', () => {
@@ -670,6 +722,73 @@ function updateGaborContrast(v) {
   const labels = ['極低','極低','低','低','中','中','高','高','極高','極高'];
   document.getElementById('gaborContrastVal').textContent = labels[v - 1] || '中';
   resetSymbols();
+}
+
+// ===== ARROW MODE =====
+function toggleArrowMode() {
+  arrowMode = !arrowMode;
+  document.getElementById('toggleArrow').classList.toggle('on', arrowMode);
+  document.getElementById('arrow-confirm-btn').style.display = arrowMode ? 'flex' : 'none';
+  if (arrowMode) {
+    selectNextTarget();
+  } else {
+    clearArrowIndicator();
+    if (currentTarget) {
+      currentTarget.el.classList.remove('arrow-target');
+      currentTarget = null;
+    }
+  }
+}
+
+function selectNextTarget() {
+  // Clear previous
+  clearArrowIndicator();
+  if (currentTarget) {
+    currentTarget.el.classList.remove('arrow-target');
+  }
+  
+  // Pick a random remaining symbol
+  const remaining = symbols.filter(s => !s.removed);
+  if (remaining.length === 0) {
+    currentTarget = null;
+    return;
+  }
+  
+  currentTarget = remaining[Math.floor(Math.random() * remaining.length)];
+  currentTarget.el.classList.add('arrow-target');
+  createArrowIndicator();
+}
+
+function createArrowIndicator() {
+  if (!currentTarget || currentTarget.removed) return;
+  
+  arrowEl = document.createElement('div');
+  arrowEl.className = 'arrow-indicator';
+  // Red downward arrow SVG
+  arrowEl.innerHTML = '<svg width="30" height="36" viewBox="0 0 30 36"><polygon points="15,36 0,18 8,18 8,0 22,0 22,18 30,18" fill="#ff4444"/></svg>';
+  document.getElementById('play-area').appendChild(arrowEl);
+  updateArrowPosition();
+}
+
+function updateArrowPosition() {
+  if (!arrowEl || !currentTarget || currentTarget.removed) return;
+  const sz = currentTarget.baseSize * globalSizeMultiplier * currentTarget.pulseScale;
+  const ax = currentTarget.x + sz / 2 - 15;
+  const ay = currentTarget.y - 40;
+  arrowEl.style.left = ax + 'px';
+  arrowEl.style.top = Math.max(0, ay) + 'px';
+}
+
+function clearArrowIndicator() {
+  if (arrowEl && arrowEl.parentNode) {
+    arrowEl.parentNode.removeChild(arrowEl);
+  }
+  arrowEl = null;
+}
+
+function confirmArrowTarget() {
+  if (!arrowMode || !currentTarget || currentTarget.removed) return;
+  handleTap(currentTarget);
 }
 
 function getGaborGray() {
@@ -834,6 +953,7 @@ function drawLandoltOnElement(el, size, color, gapDir) {
   canvas.style.width = size + 'px';
   canvas.style.height = size + 'px';
   canvas.style.display = 'block';
+  canvas.style.pointerEvents = 'none';
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
   
@@ -856,7 +976,12 @@ function drawLandoltOnElement(el, size, color, gapDir) {
 // ===== TAP HANDLER =====
 function handleTap(s) {
   if (s.removed) return;
+  
+  // In arrow mode, only allow tapping the current target
+  if (arrowMode && currentTarget && s !== currentTarget) return;
+  
   s.removed = true;
+  s.el.classList.remove('arrow-target');
   tapCount++;
   document.getElementById('tapCount').textContent = tapCount;
   s.el.classList.add('popping');
@@ -864,6 +989,11 @@ function handleTap(s) {
     if (s.el.parentNode) s.el.parentNode.removeChild(s.el);
   }, 350);
   updateCounts();
+  
+  // Auto-select next target in arrow mode
+  if (arrowMode) {
+    setTimeout(() => selectNextTarget(), 400);
+  }
 }
 
 function updateCounts() {
@@ -980,6 +1110,11 @@ function startAnimation() {
       }
     }
     
+    // Update arrow position if in arrow mode
+    if (arrowMode && arrowEl && currentTarget && !currentTarget.removed) {
+      updateArrowPosition();
+    }
+    
     animFrameId = requestAnimationFrame(loop);
   }
   
@@ -988,7 +1123,12 @@ function startAnimation() {
 
 // ===== RESET =====
 function resetSymbols() {
+  clearArrowIndicator();
+  currentTarget = null;
   createSymbolData();
+  if (arrowMode) {
+    setTimeout(() => selectNextTarget(), 100);
+  }
 }
 
 // ===== SHUFFLE =====
