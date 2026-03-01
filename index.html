@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a1a">
+<title>Vision Training - 視力トレーニング</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="FNT512.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  touch-action:none;
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;user-select:none;
+  overscroll-behavior:none;
+}
+body{
+  font-family:'Helvetica Neue',Arial,sans-serif;
+  background:#0a0a1a;color:#e0e0e0;
+  position:relative;
+}
+
+/* ===== SPLASH SCREEN ===== */
+#splash{
+  position:fixed;inset:0;z-index:10000;
+  background:#0a0a1a;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  opacity:1;transition:opacity 0.6s ease;
+}
+#splash.hide{opacity:0;pointer-events:none}
+#splash img{width:120px;height:120px;margin-bottom:18px;border-radius:20px}
+#splash .splash-brand{
+  font-size:clamp(11px,3vw,16px);
+  letter-spacing:2px;color:#aaa;
+  white-space:nowrap;margin-bottom:10px;
+}
+#splash .splash-title{
+  font-size:clamp(18px,5vw,28px);font-weight:700;
+  color:#fff;margin-bottom:8px;text-align:center;
+}
+#splash .splash-copy{font-size:11px;color:#666;margin-top:18px}
+
+/* ===== MAIN APP ===== */
+#app{
+  display:none;width:100%;height:100%;
+  position:relative;overflow:hidden;
+}
+
+/* ===== HEADER ===== */
+#header{
+  position:fixed;top:0;left:0;right:0;
+  z-index:100;
+  background:rgba(10,10,26,0.92);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  padding:env(safe-area-inset-top,8px) 12px 8px;
+  display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  min-height:50px;
+}
+#header .logo{width:36px;height:36px;border-radius:8px;flex-shrink:0}
+#header .title-area{flex:1;min-width:0}
+#header .title-area h1{font-size:15px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#header .title-area p{font-size:10px;color:#888;margin-top:1px}
+
+/* ===== MENU BUTTON ===== */
+.menu-btn{
+  width:40px;height:40px;border:none;background:rgba(255,255,255,0.08);
+  border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.menu-btn svg{width:22px;height:22px;stroke:#ccc;fill:none;stroke-width:2;stroke-linecap:round}
+
+/* ===== SIDE MENU ===== */
+#menu-overlay{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,0.5);
+  opacity:0;pointer-events:none;
+  transition:opacity 0.3s ease;
+}
+#menu-overlay.open{opacity:1;pointer-events:auto}
+#side-menu{
+  position:fixed;top:0;right:0;bottom:0;z-index:201;
+  width:min(320px,85vw);
+  background:#111125;
+  transform:translateX(100%);
+  transition:transform 0.3s ease;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+#side-menu.open{transform:translateX(0)}
+#side-menu .menu-header{
+  padding:env(safe-area-inset-top,12px) 16px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  display:flex;align-items:center;justify-content:space-between;
+}
+#side-menu .menu-header h2{font-size:16px;font-weight:700;color:#fff}
+.close-btn{
+  width:36px;height:36px;border:none;background:rgba(255,255,255,0.08);
+  border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.close-btn svg{width:20px;height:20px;stroke:#ccc;fill:none;stroke-width:2}
+
+#side-menu .menu-body{
+  flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  touch-action:auto !important;
+  padding:16px;
+}
+#side-menu .menu-body *{touch-action:auto !important}
+
+.menu-section{margin-bottom:20px}
+.menu-section h3{font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+
+.menu-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;background:rgba(255,255,255,0.04);
+  border-radius:10px;margin-bottom:8px;
+}
+.menu-row label{font-size:13px;color:#ccc}
+
+/* Toggle Switch */
+.toggle{
+  width:46px;height:26px;background:#333;border-radius:13px;
+  position:relative;cursor:pointer;transition:background 0.3s;
+  flex-shrink:0;
+}
+.toggle.on{background:#0071e3}
+.toggle::after{
+  content:'';position:absolute;top:3px;left:3px;
+  width:20px;height:20px;background:#fff;border-radius:50%;
+  transition:transform 0.3s;
+}
+.toggle.on::after{transform:translateX(20px)}
+
+/* Slider */
+.slider-row{padding:10px 12px;background:rgba(255,255,255,0.04);border-radius:10px;margin-bottom:8px}
+.slider-row label{font-size:13px;color:#ccc;display:block;margin-bottom:8px}
+.slider-row input[type=range]{
+  width:100%;height:6px;-webkit-appearance:none;appearance:none;
+  background:#333;border-radius:3px;outline:none;
+}
+.slider-row input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:22px;height:22px;
+  background:#0071e3;border-radius:50%;cursor:pointer;
+}
+.slider-val{font-size:12px;color:#0071e3;float:right;margin-top:-22px}
+
+/* Action Buttons */
+.action-btn{
+  width:100%;padding:12px;border:none;border-radius:10px;
+  font-size:14px;font-weight:600;cursor:pointer;
+  margin-bottom:8px;transition:all 0.2s;
+}
+.btn-primary{background:#0071e3;color:#fff}
+.btn-primary:active{background:#005bb5}
+.btn-danger{background:#d32f2f;color:#fff}
+.btn-danger:active{background:#b71c1c}
+.btn-secondary{background:rgba(255,255,255,0.1);color:#ccc}
+.btn-secondary:active{background:rgba(255,255,255,0.15)}
+
+/* ===== INFO PANEL ===== */
+#info-panel{
+  position:fixed;top:0;left:0;bottom:0;z-index:201;
+  width:min(360px,90vw);
+  background:#111125;
+  transform:translateX(-100%);
+  transition:transform 0.3s ease;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+#info-panel.open{transform:translateX(0)}
+#info-panel .menu-header{
+  padding:env(safe-area-inset-top,12px) 16px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  display:flex;align-items:center;justify-content:space-between;
+}
+#info-panel .menu-header h2{font-size:16px;font-weight:700;color:#fff}
+#info-panel .info-body{
+  flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  touch-action:auto !important;
+  padding:16px;
+}
+#info-panel .info-body *{touch-action:auto !important}
+#info-panel .info-body p{font-size:13px;line-height:1.7;color:#bbb;margin-bottom:12px}
+#info-panel .info-body h3{font-size:14px;color:#fff;margin:16px 0 8px}
+
+.info-btn{
+  width:40px;height:40px;border:none;background:rgba(255,255,255,0.08);
+  border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.info-btn svg{width:20px;height:20px;stroke:#ccc;fill:none;stroke-width:2}
+
+/* ===== PLAY AREA ===== */
+#play-area{
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  overflow:hidden;
+  background:#0a0a1a;
+}
+
+/* ===== FLOATING SYMBOLS ===== */
+.symbol{
+  position:absolute;
+  cursor:pointer;
+  transition:opacity 0.3s ease;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;
+  will-change:transform;
+  z-index:1;
+}
+.symbol.popping{
+  animation:popOut 0.35s ease forwards;
+}
+@keyframes popOut{
+  0%{transform:scale(1);opacity:1}
+  50%{transform:scale(1.3);opacity:0.5}
+  100%{transform:scale(0);opacity:0}
+}
+
+/* Landolt C Ring */
+.landolt{
+  border:none !important;
+  background:transparent !important;
+}
+
+/* ===== BOTTOM CONTROLS ===== */
+#bottom-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  background:rgba(10,10,26,0.92);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-top:1px solid rgba(255,255,255,0.08);
+  padding:8px 12px env(safe-area-inset-bottom,8px);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+#bottom-bar .count-display{
+  font-size:12px;color:#888;white-space:nowrap;
+}
+#bottom-bar .count-display span{color:#0071e3;font-weight:700}
+
+/* ===== FOOTER ===== */
+#footer{
+  position:fixed;bottom:0;left:0;right:0;
+  text-align:center;font-size:10px;color:#444;
+  padding:4px;z-index:50;
+  pointer-events:none;
+}
+
+/* ===== iOS INSTALL PROMPT ===== */
+#install-prompt{
+  display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  z-index:300;background:#1a1a3a;border:1px solid rgba(255,255,255,0.1);
+  border-radius:14px;padding:16px 20px;width:min(340px,90vw);
+  text-align:center;
+}
+#install-prompt p{font-size:13px;color:#ccc;line-height:1.6;margin-bottom:10px}
+#install-prompt .close-install{
+  background:rgba(255,255,255,0.1);border:none;color:#ccc;
+  padding:6px 16px;border-radius:8px;font-size:12px;cursor:pointer;
+}
+
+/* ===== SIZE CONTROL FLOATING ===== */
+#size-control{
+  position:fixed;bottom:60px;left:50%;transform:translateX(-50%);
+  z-index:99;display:flex;align-items:center;gap:8px;
+  background:rgba(10,10,26,0.9);border:1px solid rgba(255,255,255,0.1);
+  border-radius:30px;padding:6px 14px;
+}
+#size-control button{
+  width:34px;height:34px;border:none;border-radius:50%;
+  background:rgba(255,255,255,0.1);color:#fff;font-size:18px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+#size-control button:active{background:rgba(255,255,255,0.2)}
+#size-control .size-label{font-size:12px;color:#aaa;min-width:40px;text-align:center}
+
+/* Animations */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* ===== LIGHT MODE ===== */
+body.light-mode{background:#f5f5f0;color:#222}
+body.light-mode #splash{background:#f5f5f0}
+body.light-mode #splash .splash-brand{color:#666}
+body.light-mode #splash .splash-title{color:#111}
+body.light-mode #splash .splash-copy{color:#999}
+
+body.light-mode #header{
+  background:rgba(245,245,240,0.94);
+  border-bottom-color:rgba(0,0,0,0.1);
+}
+body.light-mode #header .title-area h1{color:#111}
+body.light-mode #header .title-area p{color:#888}
+body.light-mode .menu-btn,
+body.light-mode .info-btn{background:rgba(0,0,0,0.06)}
+body.light-mode .menu-btn svg,
+body.light-mode .info-btn svg{stroke:#444}
+body.light-mode .close-btn{background:rgba(0,0,0,0.06)}
+body.light-mode .close-btn svg{stroke:#444}
+
+body.light-mode #play-area{background:#f5f5f0}
+
+body.light-mode #side-menu,
+body.light-mode #info-panel{background:#eaeae5}
+body.light-mode #side-menu .menu-header,
+body.light-mode #info-panel .menu-header{border-bottom-color:rgba(0,0,0,0.1)}
+body.light-mode #side-menu .menu-header h2,
+body.light-mode #info-panel .menu-header h2{color:#111}
+body.light-mode .menu-section h3{color:#666}
+body.light-mode .menu-row{background:rgba(0,0,0,0.04)}
+body.light-mode .menu-row label{color:#333}
+body.light-mode .toggle{background:#ccc}
+body.light-mode .slider-row{background:rgba(0,0,0,0.04)}
+body.light-mode .slider-row label{color:#333}
+body.light-mode .slider-row input[type=range]{background:#ccc}
+body.light-mode .btn-secondary{background:rgba(0,0,0,0.08);color:#333}
+body.light-mode #info-panel .info-body p{color:#444}
+body.light-mode #info-panel .info-body h3{color:#111}
+
+body.light-mode #bottom-bar{
+  background:rgba(245,245,240,0.94);
+  border-top-color:rgba(0,0,0,0.1);
+}
+body.light-mode #bottom-bar .count-display{color:#666}
+
+body.light-mode #size-control{
+  background:rgba(245,245,240,0.92);
+  border-color:rgba(0,0,0,0.1);
+}
+body.light-mode #size-control button{
+  background:rgba(0,0,0,0.08);color:#222;
+}
+body.light-mode #size-control .size-label{color:#555}
+
+body.light-mode #install-prompt{
+  background:#e8e8e3;border-color:rgba(0,0,0,0.1);
+}
+body.light-mode #install-prompt p{color:#444}
+body.light-mode #install-prompt .close-install{background:rgba(0,0,0,0.08);color:#444}
+
+body.light-mode #footer{color:#aaa}
+body.light-mode #menu-overlay{background:rgba(0,0,0,0.3)}
+
+/* ===== GABOR PATCH MODE ===== */
+body.gabor-mode{background:#808080;color:#333}
+body.gabor-mode #splash{background:#808080}
+body.gabor-mode #splash .splash-brand{color:#666}
+body.gabor-mode #splash .splash-title{color:#555}
+body.gabor-mode #splash .splash-copy{color:#6a6a6a}
+
+body.gabor-mode #play-area{background:#808080}
+
+body.gabor-mode #side-menu,
+body.gabor-mode #info-panel{background:#757575}
+body.gabor-mode #side-menu .menu-header,
+body.gabor-mode #info-panel .menu-header{border-bottom-color:rgba(0,0,0,0.12)}
+body.gabor-mode #side-menu .menu-header h2,
+body.gabor-mode #info-panel .menu-header h2{color:#333}
+body.gabor-mode .menu-section h3{color:#555}
+body.gabor-mode .menu-row{background:rgba(0,0,0,0.06)}
+body.gabor-mode .menu-row label{color:#333}
+body.gabor-mode .toggle{background:#999}
+body.gabor-mode .slider-row{background:rgba(0,0,0,0.06)}
+body.gabor-mode .slider-row label{color:#333}
+body.gabor-mode .slider-row input[type=range]{background:#999}
+body.gabor-mode .btn-secondary{background:rgba(0,0,0,0.1);color:#333}
+body.gabor-mode #info-panel .info-body p{color:#444}
+body.gabor-mode #info-panel .info-body h3{color:#333}
+
+body.gabor-mode #bottom-bar{
+  background:rgba(128,128,128,0.94);
+  border-top-color:rgba(0,0,0,0.1);
+}
+body.gabor-mode #bottom-bar .count-display{color:#555}
+
+body.gabor-mode #size-control{
+  background:rgba(128,128,128,0.92);
+  border-color:rgba(0,0,0,0.12);
+}
+body.gabor-mode #size-control button{background:rgba(0,0,0,0.1);color:#444}
+body.gabor-mode #size-control .size-label{color:#555}
+
+body.gabor-mode #install-prompt{background:#727272;border-color:rgba(0,0,0,0.12)}
+body.gabor-mode #install-prompt p{color:#444}
+body.gabor-mode #install-prompt .close-install{background:rgba(0,0,0,0.1);color:#444}
+
+body.gabor-mode #footer{color:#6a6a6a}
+body.gabor-mode #menu-overlay{background:rgba(0,0,0,0.3)}
+</style>
+</head>
+<body>
+
+<!-- SPLASH SCREEN -->
+<div id="splash">
+  <img src="FNT512.png" alt="FNT Logo">
+  <div class="splash-brand">Functional Neuro Training</div>
+  <div class="splash-title">Vision Training<br>視力トレーニング</div>
+  <div class="splash-copy">© Functional Neuro Training</div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <!-- PLAY AREA -->
+  <div id="play-area" ontouchstart=""></div>
+
+  <!-- HEADER -->
+  <div id="header">
+    <button class="info-btn" id="infoBtn" aria-label="Info">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    </button>
+    <img class="logo" src="FNT512-transparent.png" alt="FNT" onerror="this.style.display='none'">
+    <div class="title-area">
+      <h1>Vision Training</h1>
+      <p>視力トレーニング</p>
+    </div>
+    <button class="menu-btn" id="menuBtn" aria-label="Menu">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </div>
+
+  <!-- INFO PANEL (LEFT) -->
+  <div id="info-panel">
+    <div class="menu-header">
+      <h2>📖 トレーニングガイド</h2>
+      <button class="close-btn" id="closeInfo"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="info-body">
+      <h3>🧠 神経科学的背景</h3>
+      <p>このトレーニングは、視覚系の神経可塑性（Neuroplasticity）を活用し、視力の改善と視覚認知能力の向上を目指します。</p>
+
+      <h3>👁️ 視覚探索トレーニング</h3>
+      <p>様々なサイズの文字やランドルト環を探索することで、<strong>一次視覚野（V1）</strong>から<strong>高次視覚野（V4/IT）</strong>までの視覚処理経路を活性化します。小さな文字の認識は中心窩（fovea）の解像度を高め、大きな文字は周辺視野の活用を促進します。</p>
+
+      <h3>🎯 サッケード運動の活性化</h3>
+      <p>画面上の異なる位置にある文字を次々とタップすることで、<strong>前頭眼野（FEF）</strong>と<strong>上丘（Superior Colliculus）</strong>が制御するサッケード眼球運動が活性化されます。これにより、眼球運動の精度と速度が向上します。</p>
+
+      <h3>🔄 動体視力の向上</h3>
+      <p>移動モードでは、動く対象を追跡する<strong>滑動性追従眼球運動（Smooth Pursuit）</strong>が訓練されます。これは<strong>MT/V5野</strong>の活動を促進し、動体視力を向上させます。</p>
+
+      <h3>📏 焦点調節トレーニング</h3>
+      <p>サイズ変化モードでは、異なる大きさの対象に焦点を合わせることで、<strong>毛様体筋</strong>の柔軟性が向上し、近視・遠視の改善に寄与します。これは調節（Accommodation）機能のトレーニングです。</p>
+
+      <h3>🔘 ガボールパッチモード</h3>
+      <p>灰色背景に微妙に濃淡の異なる灰色の文字を表示するモードです。<strong>コントラスト感度（Contrast Sensitivity）</strong>のトレーニングに特化しています。</p>
+      <p>一次視覚野（V1）のニューロンは特定のコントラスト閾値で反応します。低コントラスト刺激を繰り返し認識する訓練により、ニューロンの<strong>コントラスト利得制御（Contrast Gain Control）</strong>が改善され、わずかな明暗差でも対象を識別できるようになります。カリフォルニア大学の研究により、この種のトレーニングが老眼や近視の改善に有効であることが示されています。</p>
+
+      <h3>📋 使い方</h3>
+      <p>1. 画面上の文字やランドルト環をタップして消していきます</p>
+      <p>2. メニューから移動モード・サイズ変化モードのON/OFFを切り替えます</p>
+      <p>3. 下部の＋/−ボタンで全体の表示サイズを調整できます</p>
+      <p>4. 全て消したらリセットして繰り返します</p>
+    </div>
+  </div>
+
+  <!-- MENU OVERLAY -->
+  <div id="menu-overlay"></div>
+
+  <!-- SIDE MENU (RIGHT) -->
+  <div id="side-menu">
+    <div class="menu-header">
+      <h2>⚙️ 設定</h2>
+      <button class="close-btn" id="closeMenu"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="menu-body">
+      <div class="menu-section">
+        <h3>モード設定</h3>
+        <div class="menu-row">
+          <label>☀️ 白背景モード</label>
+          <div class="toggle" id="toggleLight" onclick="toggleLightMode()"></div>
+        </div>
+        <div class="menu-row">
+          <label>🔘 ガボールパッチモード</label>
+          <div class="toggle" id="toggleGabor" onclick="toggleGaborMode()"></div>
+        </div>
+        <div class="menu-row">
+          <label>🚶 移動モード</label>
+          <div class="toggle" id="toggleMove" onclick="toggleSetting('move')"></div>
+        </div>
+        <div class="menu-row">
+          <label>🔄 サイズ変化モード</label>
+          <div class="toggle" id="togglePulse" onclick="toggleSetting('pulse')"></div>
+        </div>
+      </div>
+
+      <div class="menu-section">
+        <h3>表示設定</h3>
+        <div class="slider-row">
+          <label>文字数 <span class="slider-val" id="countVal">30</span></label>
+          <input type="range" min="10" max="80" value="30" id="countSlider" oninput="updateCountVal(this.value)">
+        </div>
+        <div class="slider-row">
+          <label>移動速度 <span class="slider-val" id="speedVal">1.0</span></label>
+          <input type="range" min="1" max="30" value="10" id="speedSlider" oninput="updateSpeedVal(this.value)">
+        </div>
+        <div class="slider-row" id="gaborContrastRow" style="display:none">
+          <label>ガボール濃淡差 <span class="slider-val" id="gaborContrastVal">中</span></label>
+          <input type="range" min="1" max="10" value="5" id="gaborContrastSlider" oninput="updateGaborContrast(this.value)">
+        </div>
+      </div>
+
+      <div class="menu-section">
+        <h3>アクション</h3>
+        <button class="action-btn btn-primary" onclick="resetSymbols()">🔄 リセット（再生成）</button>
+        <button class="action-btn btn-secondary" onclick="shufflePositions()">🔀 位置シャッフル</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIZE CONTROL -->
+  <div id="size-control">
+    <button onclick="adjustGlobalSize(-1)" aria-label="Smaller">−</button>
+    <div class="size-label" id="sizeLabel">100%</div>
+    <button onclick="adjustGlobalSize(1)" aria-label="Larger">＋</button>
+  </div>
+
+  <!-- BOTTOM BAR -->
+  <div id="bottom-bar">
+    <div class="count-display">残り: <span id="remainCount">0</span> / <span id="totalCount">0</span></div>
+    <div class="count-display">タップ: <span id="tapCount">0</span></div>
+  </div>
+</div>
+
+<!-- INSTALL PROMPT -->
+<div id="install-prompt">
+  <p>📲 ホーム画面に追加するには<br>共有ボタン → 「ホーム画面に追加」</p>
+  <button class="close-install" onclick="this.parentElement.style.display='none'">閉じる</button>
+</div>
+
+<!-- FOOTER -->
+<div id="footer">© Functional Neuro Training</div>
+
+<script>
+// ===== CONFIG =====
+const DARK_COLORS = [
+  '#E69F00', // Orange
+  '#56B4E9', // Sky Blue
+  '#009E73', // Bluish Green
+  '#F0E442', // Yellow
+  '#0072B2', // Blue
+  '#D55E00', // Vermillion
+  '#CC79A7', // Reddish Purple
+  '#FFFFFF', // White
+];
+
+const LIGHT_COLORS = [
+  '#B87800', // Dark Orange
+  '#0072B2', // Blue
+  '#007A5E', // Dark Green
+  '#8B7000', // Dark Yellow / Olive
+  '#004080', // Navy
+  '#C04000', // Dark Vermillion
+  '#9B4F7D', // Dark Pink
+  '#222222', // Near Black
+];
+
+let isLightMode = false;
+let isGaborMode = false;
+let gaborContrast = 5; // 1-10, controls how different the grays are
+
+const LANDOLT_DIRECTIONS = [0, 45, 90, 135, 180, 225, 270, 315];
+
+const HIRAGANA = 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん';
+const KATAKANA = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const NUMBERS = '0123456789';
+
+// ===== STATE =====
+let symbols = [];
+let settings = { move: false, pulse: false };
+let globalSizeMultiplier = 1.0;
+let animFrameId = null;
+let tapCount = 0;
+let headerH = 56;
+let bottomH = 50;
+
+// ===== SPLASH =====
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('splash').classList.add('hide');
+    setTimeout(() => {
+      document.getElementById('splash').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      headerH = document.getElementById('header').offsetHeight || 56;
+      bottomH = document.getElementById('bottom-bar').offsetHeight + document.getElementById('size-control').offsetHeight + 10;
+      resetSymbols();
+      startAnimation();
+      showInstallPrompt();
+    }, 400);
+  }, 1800);
+});
+
+// ===== SERVICE WORKER =====
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ===== MENU =====
+const menuBtn = document.getElementById('menuBtn');
+const closeMenuBtn = document.getElementById('closeMenu');
+const menuOverlay = document.getElementById('menu-overlay');
+const sideMenu = document.getElementById('side-menu');
+const infoBtn = document.getElementById('infoBtn');
+const closeInfoBtn = document.getElementById('closeInfo');
+const infoPanel = document.getElementById('info-panel');
+
+function openMenu() {
+  sideMenu.classList.add('open');
+  menuOverlay.classList.add('open');
+}
+function closeMenu() {
+  sideMenu.classList.remove('open');
+  menuOverlay.classList.remove('open');
+}
+function openInfo() {
+  infoPanel.classList.add('open');
+  menuOverlay.classList.add('open');
+}
+function closeInfo() {
+  infoPanel.classList.remove('open');
+  menuOverlay.classList.remove('open');
+}
+
+menuBtn.addEventListener('click', openMenu);
+closeMenuBtn.addEventListener('click', closeMenu);
+infoBtn.addEventListener('click', openInfo);
+closeInfoBtn.addEventListener('click', closeInfo);
+menuOverlay.addEventListener('click', () => { closeMenu(); closeInfo(); });
+
+// ===== TOGGLE =====
+function toggleSetting(key) {
+  settings[key] = !settings[key];
+  const el = document.getElementById(key === 'move' ? 'toggleMove' : 'togglePulse');
+  el.classList.toggle('on', settings[key]);
+}
+
+// ===== LIGHT MODE =====
+function toggleLightMode() {
+  isLightMode = !isLightMode;
+  if (isLightMode && isGaborMode) {
+    isGaborMode = false;
+    document.getElementById('toggleGabor').classList.remove('on');
+    document.body.classList.remove('gabor-mode');
+    document.getElementById('gaborContrastRow').style.display = 'none';
+  }
+  document.getElementById('toggleLight').classList.toggle('on', isLightMode);
+  document.body.classList.toggle('light-mode', isLightMode);
+  document.querySelector('meta[name="theme-color"]').content = isLightMode ? '#f5f5f0' : '#0a0a1a';
+  resetSymbols();
+}
+
+// ===== GABOR MODE =====
+function toggleGaborMode() {
+  isGaborMode = !isGaborMode;
+  if (isGaborMode && isLightMode) {
+    isLightMode = false;
+    document.getElementById('toggleLight').classList.remove('on');
+    document.body.classList.remove('light-mode');
+  }
+  document.getElementById('toggleGabor').classList.toggle('on', isGaborMode);
+  document.body.classList.toggle('gabor-mode', isGaborMode);
+  document.getElementById('gaborContrastRow').style.display = isGaborMode ? 'block' : 'none';
+  document.querySelector('meta[name="theme-color"]').content = isGaborMode ? '#808080' : (isLightMode ? '#f5f5f0' : '#0a0a1a');
+  resetSymbols();
+}
+
+function updateGaborContrast(v) {
+  gaborContrast = parseInt(v);
+  const labels = ['極低','極低','低','低','中','中','高','高','極高','極高'];
+  document.getElementById('gaborContrastVal').textContent = labels[v - 1] || '中';
+  resetSymbols();
+}
+
+function getGaborGray() {
+  // Background is #808080 = rgb(128,128,128)
+  // Spread controls how far from 128 the grays can go (darker side only)
+  // gaborContrast 1 = very subtle (5-15 away), 10 = more visible (30-60 away)
+  const minSpread = 5 + gaborContrast * 2;   // 7..25
+  const maxSpread = 15 + gaborContrast * 5;   // 20..65
+  const offset = minSpread + Math.random() * (maxSpread - minSpread);
+  const val = Math.round(128 - offset); // always darker than bg
+  const hex = Math.max(0, Math.min(255, val)).toString(16).padStart(2, '0');
+  return '#' + hex + hex + hex;
+}
+
+// ===== SLIDERS =====
+function updateCountVal(v) { document.getElementById('countVal').textContent = v; }
+function updateSpeedVal(v) { document.getElementById('speedVal').textContent = (v / 10).toFixed(1); }
+
+// ===== GLOBAL SIZE =====
+function adjustGlobalSize(dir) {
+  globalSizeMultiplier = Math.max(0.3, Math.min(3.0, globalSizeMultiplier + dir * 0.1));
+  document.getElementById('sizeLabel').textContent = Math.round(globalSizeMultiplier * 100) + '%';
+  updateSymbolSizes();
+}
+
+function updateSymbolSizes() {
+  symbols.forEach(s => {
+    if (!s.removed) {
+      const sz = s.baseSize * globalSizeMultiplier * s.pulseScale;
+      s.el.style.width = sz + 'px';
+      s.el.style.height = sz + 'px';
+      if (s.type === 'landolt') {
+        drawLandoltOnElement(s.el, sz, s.color, s.gapDir);
+      } else {
+        s.el.style.fontSize = (sz * 0.6) + 'px';
+      }
+    }
+  });
+}
+
+// ===== CREATE SYMBOL =====
+function createSymbolData() {
+  const count = parseInt(document.getElementById('countSlider').value);
+  symbols.forEach(s => { if (s.el && s.el.parentNode) s.el.parentNode.removeChild(s.el); });
+  symbols = [];
+  tapCount = 0;
+  document.getElementById('tapCount').textContent = '0';
+  
+  const playArea = document.getElementById('play-area');
+  const areaW = playArea.clientWidth;
+  const areaH = playArea.clientHeight;
+  const safeTop = headerH + 10;
+  const safeBottom = bottomH + 20;
+  
+  // Placed rects for collision detection
+  const placed = [];
+  
+  function overlaps(x, y, sz) {
+    const pad = 6; // minimum gap between symbols
+    for (let i = 0; i < placed.length; i++) {
+      const p = placed[i];
+      if (x < p.x + p.s + pad && x + sz + pad > p.x &&
+          y < p.y + p.s + pad && y + sz + pad > p.y) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  for (let i = 0; i < count; i++) {
+    const typeRoll = Math.random();
+    let type, content, gapDir = 0;
+    
+    if (typeRoll < 0.3) {
+      type = 'landolt';
+      gapDir = LANDOLT_DIRECTIONS[Math.floor(Math.random() * LANDOLT_DIRECTIONS.length)];
+      content = '';
+    } else if (typeRoll < 0.5) {
+      type = 'hiragana';
+      content = HIRAGANA[Math.floor(Math.random() * HIRAGANA.length)];
+    } else if (typeRoll < 0.7) {
+      type = 'katakana';
+      content = KATAKANA[Math.floor(Math.random() * KATAKANA.length)];
+    } else if (typeRoll < 0.9) {
+      type = 'alphabet';
+      content = ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+    } else {
+      type = 'number';
+      content = NUMBERS[Math.floor(Math.random() * NUMBERS.length)];
+    }
+    
+    let color;
+    if (isGaborMode) {
+      color = getGaborGray();
+    } else {
+      const colors = isLightMode ? LIGHT_COLORS : DARK_COLORS;
+      color = colors[Math.floor(Math.random() * colors.length)];
+    }
+    const baseSize = 14 + Math.random() * 66;
+    const sz = baseSize * globalSizeMultiplier;
+    
+    // Find non-overlapping position (try up to 200 times, then place anyway)
+    let x, y, tries = 0;
+    do {
+      x = Math.random() * Math.max(1, areaW - sz);
+      y = safeTop + Math.random() * Math.max(1, areaH - safeTop - safeBottom - sz);
+      tries++;
+    } while (overlaps(x, y, sz) && tries < 200);
+    
+    placed.push({ x, y, s: sz });
+    
+    let el;
+    if (type === 'landolt') {
+      el = document.createElement('div');
+      el.className = 'symbol landolt';
+      el.style.width = sz + 'px';
+      el.style.height = sz + 'px';
+      drawLandoltOnElement(el, sz, color, gapDir);
+    } else {
+      el = document.createElement('div');
+      el.className = 'symbol';
+      el.textContent = content;
+      el.style.width = sz + 'px';
+      el.style.height = sz + 'px';
+      el.style.fontSize = (sz * 0.6) + 'px';
+      el.style.color = color;
+    }
+    
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    
+    const symbolData = {
+      el, type, content, color, gapDir,
+      baseSize, pulseScale: 1,
+      x, y,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: (Math.random() - 0.5) * 0.5,
+      pulseSpeed: 0.005 + Math.random() * 0.015,
+      pulsePhase: Math.random() * Math.PI * 2,
+      removed: false
+    };
+    
+    el.addEventListener('click', () => handleTap(symbolData));
+    el.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      handleTap(symbolData);
+    });
+    
+    playArea.appendChild(el);
+    symbols.push(symbolData);
+  }
+  
+  updateCounts();
+}
+
+function drawLandoltOnElement(el, size, color, gapDir) {
+  el.innerHTML = '';
+  const canvas = document.createElement('canvas');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.ceil(size * dpr);
+  canvas.height = Math.ceil(size * dpr);
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+  canvas.style.display = 'block';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  
+  const cx = size / 2, cy = size / 2;
+  const outerR = size / 2 - 1;
+  const innerR = outerR * 0.5;
+  const gapRad = 30 * Math.PI / 180;
+  const dirRad = (gapDir - 90) * Math.PI / 180;
+  
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR, dirRad + gapRad, dirRad + Math.PI * 2 - gapRad);
+  ctx.arc(cx, cy, innerR, dirRad + Math.PI * 2 - gapRad, dirRad + gapRad, true);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  
+  el.appendChild(canvas);
+}
+
+// ===== TAP HANDLER =====
+function handleTap(s) {
+  if (s.removed) return;
+  s.removed = true;
+  tapCount++;
+  document.getElementById('tapCount').textContent = tapCount;
+  s.el.classList.add('popping');
+  setTimeout(() => {
+    if (s.el.parentNode) s.el.parentNode.removeChild(s.el);
+  }, 350);
+  updateCounts();
+}
+
+function updateCounts() {
+  const remaining = symbols.filter(s => !s.removed).length;
+  document.getElementById('remainCount').textContent = remaining;
+  document.getElementById('totalCount').textContent = symbols.length;
+}
+
+// ===== ANIMATION LOOP =====
+function startAnimation() {
+  if (animFrameId) cancelAnimationFrame(animFrameId);
+  
+  function loop() {
+    const playArea = document.getElementById('play-area');
+    const areaW = playArea.clientWidth;
+    const areaH = playArea.clientHeight;
+    const safeTop = headerH + 10;
+    const safeBottom = bottomH + 20;
+    const speedMult = parseInt(document.getElementById('speedSlider').value) / 10;
+    const pad = 4; // min gap between symbols
+    
+    // Get active symbols
+    const active = symbols.filter(s => !s.removed);
+    
+    // Movement + wall bounce
+    if (settings.move) {
+      for (let i = 0; i < active.length; i++) {
+        const s = active[i];
+        const sz = s.baseSize * globalSizeMultiplier * s.pulseScale;
+        
+        s.x += s.vx * speedMult;
+        s.y += s.vy * speedMult;
+        
+        // Wall bounce
+        if (s.x < 0) { s.x = 0; s.vx = Math.abs(s.vx); }
+        if (s.x > areaW - sz) { s.x = areaW - sz; s.vx = -Math.abs(s.vx); }
+        if (s.y < safeTop) { s.y = safeTop; s.vy = Math.abs(s.vy); }
+        if (s.y > areaH - safeBottom - sz) { s.y = areaH - safeBottom - sz; s.vy = -Math.abs(s.vy); }
+      }
+      
+      // Symbol-to-symbol collision (center-based circle bounce)
+      for (let i = 0; i < active.length; i++) {
+        const a = active[i];
+        const szA = a.baseSize * globalSizeMultiplier * a.pulseScale;
+        const cxA = a.x + szA / 2;
+        const cyA = a.y + szA / 2;
+        const rA = szA / 2 + pad;
+        
+        for (let j = i + 1; j < active.length; j++) {
+          const b = active[j];
+          const szB = b.baseSize * globalSizeMultiplier * b.pulseScale;
+          const cxB = b.x + szB / 2;
+          const cyB = b.y + szB / 2;
+          const rB = szB / 2 + pad;
+          
+          const dx = cxB - cxA;
+          const dy = cyB - cyA;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = rA + rB;
+          
+          if (dist < minDist && dist > 0.01) {
+            // Normalize collision axis
+            const nx = dx / dist;
+            const ny = dy / dist;
+            
+            // Separate (push apart equally)
+            const overlap = minDist - dist;
+            const push = overlap / 2 + 0.5;
+            a.x -= nx * push;
+            a.y -= ny * push;
+            b.x += nx * push;
+            b.y += ny * push;
+            
+            // Bounce: swap velocity components along collision axis
+            const relVx = a.vx - b.vx;
+            const relVy = a.vy - b.vy;
+            const dot = relVx * nx + relVy * ny;
+            
+            // Only bounce if moving toward each other
+            if (dot > 0) {
+              a.vx -= dot * nx;
+              a.vy -= dot * ny;
+              b.vx += dot * nx;
+              b.vy += dot * ny;
+            }
+          }
+        }
+      }
+      
+      // Apply positions to DOM
+      for (let i = 0; i < active.length; i++) {
+        const s = active[i];
+        s.el.style.left = s.x + 'px';
+        s.el.style.top = s.y + 'px';
+      }
+    }
+    
+    // Pulse (size change)
+    if (settings.pulse) {
+      for (let i = 0; i < active.length; i++) {
+        const s = active[i];
+        s.pulsePhase += s.pulseSpeed;
+        s.pulseScale = 0.6 + 0.4 * (0.5 + 0.5 * Math.sin(s.pulsePhase));
+        
+        const newSz = s.baseSize * globalSizeMultiplier * s.pulseScale;
+        s.el.style.width = newSz + 'px';
+        s.el.style.height = newSz + 'px';
+        
+        if (s.type === 'landolt') {
+          drawLandoltOnElement(s.el, newSz, s.color, s.gapDir);
+        } else {
+          s.el.style.fontSize = (newSz * 0.6) + 'px';
+        }
+      }
+    }
+    
+    animFrameId = requestAnimationFrame(loop);
+  }
+  
+  loop();
+}
+
+// ===== RESET =====
+function resetSymbols() {
+  createSymbolData();
+}
+
+// ===== SHUFFLE =====
+function shufflePositions() {
+  const playArea = document.getElementById('play-area');
+  const areaW = playArea.clientWidth;
+  const areaH = playArea.clientHeight;
+  const safeTop = headerH + 10;
+  const safeBottom = bottomH + 20;
+  
+  symbols.forEach(s => {
+    if (s.removed) return;
+    const sz = s.baseSize * globalSizeMultiplier;
+    s.x = Math.random() * (areaW - sz);
+    s.y = safeTop + Math.random() * (areaH - safeTop - safeBottom - sz);
+    s.el.style.left = s.x + 'px';
+    s.el.style.top = s.y + 'px';
+    s.vx = (Math.random() - 0.5) * 0.5;
+    s.vy = (Math.random() - 0.5) * 0.5;
+  });
+}
+
+// ===== INSTALL PROMPT =====
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+});
+
+function showInstallPrompt() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  if (isStandalone) return;
+  
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (isIOS) {
+    setTimeout(() => {
+      document.getElementById('install-prompt').style.display = 'block';
+    }, 3000);
+  }
+}
+
+// ===== PREVENT SCROLLING =====
+document.addEventListener('touchmove', function(e) {
+  if (!e.target.closest('.menu-body') && !e.target.closest('.info-body')) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
+// Handle resize
+window.addEventListener('resize', () => {
+  headerH = document.getElementById('header').offsetHeight || 56;
+  bottomH = (document.getElementById('bottom-bar')?.offsetHeight || 50) + 
+            (document.getElementById('size-control')?.offsetHeight || 46) + 10;
+});
+</script>
+</body>
+</html>
