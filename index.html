@@ -488,6 +488,10 @@ body.gabor-mode #menu-overlay{background:rgba(0,0,0,0.3)}
       <p>矢印で指し示されたターゲットに注目し、それをタップするか✓ボタンで消していくモードです。<strong>選択的注意（Selective Attention）</strong>のトレーニングに特化しています。</p>
       <p><strong>前頭前野（PFC）</strong>と<strong>頭頂間溝（IPS）</strong>が制御する「注意のスポットライト」を特定のターゲットに向ける訓練です。周囲の妨害刺激を無視し、指定された対象のみに注意を集中することで、<strong>背側注意ネットワーク（Dorsal Attention Network）</strong>が強化されます。</p>
 
+      <h3>📐 均一サイズモード</h3>
+      <p>全ての文字・記号を同じ大きさで表示するモードです。サイズの違いによる難易度差をなくし、純粋な<strong>視覚探索能力（Visual Search）</strong>を測定・トレーニングできます。</p>
+      <p>サイズが均一な場合、視覚系は形状や色の違いのみで対象を区別する必要があります。これにより<strong>腹側視覚経路（Ventral Stream）</strong>の「何であるか」を認識する機能が集中的に鍛えられます。スライダーで10px〜100pxまでサイズを調整でき、小さいサイズでは中心視の精度、大きいサイズでは周辺視野の活用が求められます。</p>
+
       <h3>📋 使い方</h3>
       <p>1. 画面上の文字やランドルト環をタップして消していきます</p>
       <p>2. メニューから移動モード・サイズ変化モードのON/OFFを切り替えます</p>
@@ -528,6 +532,10 @@ body.gabor-mode #menu-overlay{background:rgba(0,0,0,0.3)}
           <label>➡️ 矢印モード</label>
           <div class="toggle" id="toggleArrow" onclick="toggleArrowMode()"></div>
         </div>
+        <div class="menu-row">
+          <label>📐 均一サイズモード</label>
+          <div class="toggle" id="toggleUniform" onclick="toggleUniformMode()"></div>
+        </div>
       </div>
 
       <div class="menu-section">
@@ -543,6 +551,10 @@ body.gabor-mode #menu-overlay{background:rgba(0,0,0,0.3)}
         <div class="slider-row" id="gaborContrastRow" style="display:none">
           <label>ガボール濃淡差 <span class="slider-val" id="gaborContrastVal">中</span></label>
           <input type="range" min="1" max="10" value="5" id="gaborContrastSlider" oninput="updateGaborContrast(this.value)">
+        </div>
+        <div class="slider-row" id="uniformSizeRow" style="display:none">
+          <label>均一サイズ <span class="slider-val" id="uniformSizeVal">40px</span></label>
+          <input type="range" min="10" max="100" value="40" id="uniformSizeSlider" oninput="updateUniformSize(this.value)">
         </div>
       </div>
 
@@ -626,6 +638,8 @@ let bottomH = 50;
 let arrowMode = false;
 let currentTarget = null;
 let arrowEl = null;
+let uniformMode = false;
+let uniformSize = 40;
 
 // ===== SPLASH =====
 window.addEventListener('load', () => {
@@ -791,6 +805,20 @@ function confirmArrowTarget() {
   handleTap(currentTarget);
 }
 
+// ===== UNIFORM SIZE MODE =====
+function toggleUniformMode() {
+  uniformMode = !uniformMode;
+  document.getElementById('toggleUniform').classList.toggle('on', uniformMode);
+  document.getElementById('uniformSizeRow').style.display = uniformMode ? 'block' : 'none';
+  resetSymbols();
+}
+
+function updateUniformSize(v) {
+  uniformSize = parseInt(v);
+  document.getElementById('uniformSizeVal').textContent = v + 'px';
+  resetSymbols();
+}
+
 function getGaborGray() {
   // Background is #808080 = rgb(128,128,128)
   // Spread controls how far from 128 the grays can go (darker side only)
@@ -887,7 +915,7 @@ function createSymbolData() {
       const colors = isLightMode ? LIGHT_COLORS : DARK_COLORS;
       color = colors[Math.floor(Math.random() * colors.length)];
     }
-    const baseSize = 14 + Math.random() * 66;
+    const baseSize = uniformMode ? uniformSize : (14 + Math.random() * 66);
     const sz = baseSize * globalSizeMultiplier;
     
     // Find non-overlapping position (try up to 200 times, then place anyway)
